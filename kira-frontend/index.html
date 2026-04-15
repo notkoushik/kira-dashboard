@@ -1145,8 +1145,67 @@ const APIClient = (() => {
 
     getJobStats: () => apiCall('/jobs/stats/summary'),
 
-    // Note: DB operations for other tables will be added in Phase 2
-    // For now, we'll use local storage for HR contacts, logs, etc.
+    // HR Contacts endpoints
+    getHRContacts: (filters = {}) => {
+      const params = new URLSearchParams();
+      if (filters.search) params.append('search', filters.search);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.skip) params.append('skip', filters.skip);
+      if (filters.limit) params.append('limit', filters.limit);
+      return apiCall(`/hrcontacts?${params}`);
+    },
+
+    createHRContact: (data) =>
+      apiCall('/hrcontacts', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+
+    updateHRContact: (id, updates) =>
+      apiCall(`/hrcontacts/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      }),
+
+    deleteHRContact: (id) =>
+      apiCall(`/hrcontacts/${id}`, { method: 'DELETE' }),
+
+    getHRStats: () => apiCall('/hrcontacts/stats/summary'),
+
+    // Apply Queue endpoints
+    getQueue: (filters = {}) => {
+      const params = new URLSearchParams();
+      if (filters.search) params.append('search', filters.search);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.priority) params.append('priority', filters.priority);
+      if (filters.difficulty) params.append('difficulty', filters.difficulty);
+      if (filters.skip) params.append('skip', filters.skip);
+      if (filters.limit) params.append('limit', filters.limit);
+      return apiCall(`/queue?${params}`);
+    },
+
+    createQueueItem: (data) =>
+      apiCall('/queue', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+
+    updateQueueItem: (id, updates) =>
+      apiCall(`/queue/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      }),
+
+    deleteQueueItem: (id) =>
+      apiCall(`/queue/${id}`, { method: 'DELETE' }),
+
+    bulkDeleteQueueItems: (ids) =>
+      apiCall('/queue/bulk/delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids })
+      }),
+
+    getQueueStats: () => apiCall('/queue/stats/summary'),
   };
 })();
 
@@ -1812,31 +1871,67 @@ const submitQueue = MonitorService.wrap(async function() {
     difficulty: document.getElementById('qfDifficulty').value,
     priority: document.getElementById('qfPriority').value,
     fit_reason: document.getElementById('qfFitReason').value,
+    status: 'To Apply',
   };
   if (!data.company) { showToast('Company is required', 'error'); return; }
-  await DataService.insert('apply_queue', data);
-  showToast('Added to queue', 'success');
-  closeQueueDrawer();
-  await loadData();
+  try {
+    await APIClient.createQueueItem(data);
+    showToast('Added to queue', 'success');
+    closeQueueDrawer();
+    // Clear form fields
+    document.getElementById('qfCompany').value = '';
+    document.getElementById('qfRole').value = '';
+    document.getElementById('qfLink').value = '';
+    document.getElementById('qfPortal').value = 'LinkedIn';
+    document.getElementById('qfDifficulty').value = 'Easy';
+    document.getElementById('qfPriority').value = 'Medium';
+    document.getElementById('qfFitReason').value = '';
+    await loadData();
+  } catch (err) {
+    showToast(err.message || 'Failed to add to queue', 'error');
+  }
 });
 const updateQueueStatus = MonitorService.wrap(async function(id, status) {
-  await DataService.update('apply_queue', id, { status });
-  if (status === 'Applied') EventBus.emit('apply:completed');
-  showToast(`Status: ${status}`, 'success');
-  await loadData();
+  try {
+    await APIClient.updateQueueItem(id, { status });
+    if (status === 'Applied') EventBus.emit('apply:completed');
+    showToast(`Status: ${status}`, 'success');
+    await loadData();
+  } catch (err) {
+    showToast(err.message || 'Failed to update status', 'error');
+  }
 });
 const applyNow = MonitorService.wrap(async function(id, link) {
-  window.open(decodeURIComponent(link), '_blank');
-  await DataService.update('apply_queue', id, { status: 'Applied' });
-  EventBus.emit('apply:completed');
-  showToast('Marked as Applied', 'success');
-  await loadData();
+  try {
+    window.open(decodeURIComponent(link), '_blank');
+    await APIClient.updateQueueItem(id, { status: 'Applied' });
+    EventBus.emit('apply:completed');
+    showToast('Marked as Applied', 'success');
+    await loadData();
+  } catch (err) {
+    showToast(err.message || 'Failed to update status', 'error');
+  }
 });
 const clearApplied = MonitorService.wrap(async function() {
-  const applied = StateManager.getState().apply_queue.filter(q => q.status === 'Applied');
-  for (const q of applied) { await DataService.update('apply_queue', q.id, { archived: true }); }
-  showToast(`Archived ${applied.length} applied items`, 'success');
-  await loadData();
+  const state = StateManager.getState();
+  const applied = (state.apply_queue || []).filter(q => q.status === 'Applied');
+
+  if (!applied.length) {
+    showToast('No applied items to archive', 'info');
+    return;
+  }
+
+  if (!confirm(`Archive ${applied.length} applied items?`)) return;
+
+  try {
+    for (const q of applied) {
+      await APIClient.updateQueueItem(q.id, { archived: true });
+    }
+    showToast(`Archived ${applied.length} applied items`, 'success');
+    await loadData();
+  } catch (err) {
+    showToast(err.message || 'Failed to archive items', 'error');
+  }
 });
 window.renderQueueTable = UIRenderer.renderQueueTable;
 
@@ -1882,14 +1977,19 @@ const submitHR = MonitorService.wrap(async function() {
     notes: document.getElementById('hfNotes').value,
   };
   if (!data.name) { showToast('Name is required', 'error'); return; }
-  if (id) { await DataService.update('hr_contacts', id, data); showToast('HR updated', 'success'); }
-  else { await DataService.insert('hr_contacts', data); showToast('HR contact added', 'success'); }
+  if (id) {
+    await APIClient.updateHRContact(id, data);
+    showToast('HR updated', 'success');
+  } else {
+    await APIClient.createHRContact(data);
+    showToast('HR contact added', 'success');
+  }
   closeHRDrawer();
   await loadData();
 });
 const deleteHR = MonitorService.wrap(async function(id) {
   if (!confirm('Delete this HR contact?')) return;
-  await DataService.remove('hr_contacts', id);
+  await APIClient.deleteHRContact(id);
   showToast('HR deleted', 'success');
   await loadData();
 });
@@ -1910,7 +2010,10 @@ function openEmailDraft(hrId) {
 function closeEmailModal() { document.getElementById('emailModal').classList.add('hidden'); currentEmailHRId = null; }
 const sendEmail = MonitorService.wrap(async function() {
   if (!currentEmailHRId) return;
-  await DataService.update('hr_contacts', currentEmailHRId, { status: 'Email Sent', last_contact: new Date().toISOString() });
+  await APIClient.updateHRContact(currentEmailHRId, {
+    status: 'Email Sent',
+    last_contact: new Date().toISOString()
+  });
   showToast('Email sent successfully', 'success');
   closeEmailModal();
   await loadData();
@@ -1918,7 +2021,10 @@ const sendEmail = MonitorService.wrap(async function() {
 const saveDraft = MonitorService.wrap(async function() {
   if (!currentEmailHRId) return;
   const body = document.getElementById('emailBody').value;
-  await DataService.update('hr_contacts', currentEmailHRId, { status: 'Email Drafted', notes: body });
+  await APIClient.updateHRContact(currentEmailHRId, {
+    status: 'Email Drafted',
+    notes: body
+  });
   showToast('Draft saved', 'success');
   closeEmailModal();
   await loadData();
@@ -2056,10 +2162,16 @@ const loadData = MonitorService.wrap(async function() {
     const jobsResult = await APIClient.getJobs({ limit: 100 });
     const jobs = jobsResult.jobs || jobsResult; // Handle different response formats
 
-    // For now, HR contacts, logs, etc. are stored in localStorage
-    const hrs = JSON.parse(localStorage.getItem('hr_contacts') || '[]');
+    // Fetch HR contacts from backend API
+    const hrsResult = await APIClient.getHRContacts({ limit: 100 });
+    const hrs = hrsResult.items || hrsResult; // Handle different response formats
+
+    // Fetch apply queue from backend API
+    const queueResult = await APIClient.getQueue({ limit: 100 });
+    const queue = queueResult.items || queueResult; // Handle different response formats
+
+    // For now, logs and tasks are stored in localStorage
     const logs = JSON.parse(localStorage.getItem('daily_logs') || '[]');
-    const queue = JSON.parse(localStorage.getItem('apply_queue') || '[]');
     const tasks = JSON.parse(localStorage.getItem('planner_tasks') || '[]');
 
     StateManager.setState('jobs', jobs);

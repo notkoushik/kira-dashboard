@@ -53,6 +53,20 @@ export const UpdateProfileSchema = z.object({
   linkedin: z.string().max(255).optional(),
 });
 
+export const DailyLogSchema = z.object({
+  log_text: z.string().min(1).max(5000),
+  log_date: z.string().date(),
+  tasks_completed: z.number().int().min(0).max(100).optional().nullable(),
+  streak_count: z.number().int().min(0).optional().nullable(),
+});
+
+export const PlannerTaskSchema = z.object({
+  task_slot: z.enum(['8:00 AM', '10:00 AM', '12:00 PM', '6:00 PM']),
+  task_date: z.string().date(),
+  completed: z.boolean().optional().nullable(),
+  completed_at: z.string().datetime().optional().nullable(),
+});
+
 // ============================================
 // VALIDATION MIDDLEWARE
 // ============================================

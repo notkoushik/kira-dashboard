@@ -16,6 +16,10 @@ import { sanitizeRequestBody } from './middleware/validation';
 // Routes
 import authRoutes from './routes/auth';
 import jobsRoutes from './routes/jobs';
+import hrContactsRoutes from './routes/hrcontacts';
+import logsRoutes from './routes/logs';
+import queueRoutes from './routes/queue';
+import plannerRoutes from './routes/planner';
 
 let app: Express;
 
@@ -83,6 +87,10 @@ async function initializeApp(): Promise<Express> {
     // API Routes
     app.use('/api/v1/auth', authRoutes);
     app.use('/api/v1/jobs', jobsRoutes);
+    app.use('/api/v1/hrcontacts', hrContactsRoutes);
+    app.use('/api/v1/logs', logsRoutes);
+    app.use('/api/v1/queue', queueRoutes);
+    app.use('/api/v1/planner', plannerRoutes);
 
     // 404 handler
     app.use(notFoundHandler);
