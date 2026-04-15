@@ -14,11 +14,12 @@
   ],
   "env": {
     "NODE_ENV": "production",
-    "API_PORT": "@api_port",
-    "SUPABASE_URL": "@supabase_url",
-    "SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "SUPABASE_SERVICE_KEY": "@supabase_service_key",
-    "JWT_SECRET": "@jwt_secret",
-    "FRONTEND_URL": "@frontend_url"
+    "API_PORT": "3000",
+    "SUPABASE_URL": "@SUPABASE_URL",
+    "SUPABASE_ANON_KEY": "@SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_KEY": "@SUPABASE_SERVICE_KEY",
+    "JWT_SECRET": "@JWT_SECRET",
+    "FRONTEND_URL": "@FRONTEND_URL"
   }
 }
+
