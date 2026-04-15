@@ -1,15 +1,11 @@
 {
   "version": 2,
-  "buildCommand": "cd kira-backend && npm install && npm run build",
-  "outputDirectory": "./",
-  "installCommand": "npm install --prefix kira-backend",
-  "functions": {
-    "kira-backend/src/index.ts": {
-      "runtime": "nodejs18.x",
-      "maxDuration": 30,
-      "memory": 1024
+  "builds": [
+    {
+      "src": "kira-backend/src/index.ts",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/api/(.*)",
