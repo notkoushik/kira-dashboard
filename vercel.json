@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "framework": "other",
   "buildCommand": "cd kira-backend && npm install && npm run build",
   "outputDirectory": "./",
   "installCommand": "npm install --prefix kira-backend",
