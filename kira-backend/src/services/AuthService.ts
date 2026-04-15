@@ -106,13 +106,22 @@ export class AuthService {
    * Update user profile
    */
   static async updateProfile(userId: string, profileData: any) {
+    const updateData: any = {
+      profile_data: profileData,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (profileData.name) {
+      updateData.name = profileData.name;
+    }
+
+    if (profileData.daily_goal) {
+      updateData.daily_goal = profileData.daily_goal;
+    }
+
     const { data: user, error } = await supabase
       .from('users')
-      .update({
-        name: profileData.name,
-        profile_data: profileData,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', userId)
       .select()
       .single();

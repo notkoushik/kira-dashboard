@@ -7,6 +7,7 @@ export interface User {
   email: string;
   name: string;
   password_hash: string;
+  daily_goal?: number;
   profile_data?: {
     location?: string;
     tech_stack?: string;

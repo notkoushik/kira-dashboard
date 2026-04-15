@@ -96,6 +96,7 @@ router.put(
       experience: req.body.experience,
       github: req.body.github,
       linkedin: req.body.linkedin,
+      daily_goal: req.body.daily_goal,
     });
 
     res.status(200).json({

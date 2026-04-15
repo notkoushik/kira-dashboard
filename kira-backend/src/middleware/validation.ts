@@ -51,6 +51,7 @@ export const UpdateProfileSchema = z.object({
   experience: z.string().max(255).optional(),
   github: z.string().max(255).optional(),
   linkedin: z.string().max(255).optional(),
+  daily_goal: z.number().int().min(1).max(50).optional(),
 });
 
 export const DailyLogSchema = z.object({
