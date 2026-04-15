@@ -1300,22 +1300,114 @@ const APIClient = (() => {
 })();
 
 /* ============================================================ */
-/* AIService — Hugging Face Inference (Stub for UI)             */
+/* AIService — Real Keyword-Based Job Scoring                  */
 /* ============================================================ */
 const AIService = (() => {
-  function scoreJob(title, skills) {
-    const s = (title || '').toLowerCase();
+  // Hard-coded weight map for common skills/keywords
+  const skillWeightMap = {
+    flutter: 20, dart: 20, kotlin: 15, swift: 15,
+    python: 15, 'node.js': 15, nodejs: 15, typescript: 12, javascript: 10,
+    postgresql: 15, postgres: 15, mysql: 10, mongodb: 10, redis: 8,
+    'rest api': 12, graphql: 12, 'web api': 10, 'micro service': 12, microservice: 12,
+    mobile: 18, ios: 15, android: 15, backend: 12, frontend: 12, fullstack: 15,
+    react: 12, vue: 10, angular: 10, 'react native': 15,
+    aws: 10, gcp: 10, azure: 10, docker: 10, kubernetes: 10,
+    dev: 5, engineer: 5, developer: 5, lead: 8, senior: 10,
+  };
+
+  function scoreJob(role = '', company = '') {
+    const profile = StateManager.getState().profile || {};
+    const techStack = (profile.tech_stack || '').toLowerCase();
+    const targetRoles = (profile.target_roles || '').toLowerCase();
+
+    if (!techStack && !targetRoles) {
+      return {
+        score: 0,
+        reason: 'No profile data — add your stack in Settings',
+        matched: [],
+        explanation: 'Profile incomplete. Visit Settings to add tech stack and target roles.'
+      };
+    }
+
+    const jobText = `${role || ''} ${company || ''}`.toLowerCase();
     let score = 0;
     const matched = [];
-    const skillMap = { flutter: 20, dart: 15, python: 15, 'node.js': 12, nodejs: 12, postgresql: 10, postgres: 10, 'rest api': 8, mobile: 10, backend: 8, android: 8, ios: 5 };
-    Object.entries(skillMap).forEach(([k, v]) => { if (s.includes(k)) { score += v; matched.push(k.charAt(0).toUpperCase() + k.slice(1)); } });
-    score = Math.min(100, Math.max(score, Math.floor(Math.random() * 20) + 30));
-    return { score, reason: matched.length ? 'Strong match: ' + matched.join(', ') : 'Potential match based on role requirements' };
+    const matchDetails = [];
+
+    // Parse user's tech stack (comma-separated keywords)
+    const userTechKeywords = techStack
+      .split(/[,;]/)
+      .map(k => k.trim())
+      .filter(k => k.length > 0);
+
+    // Parse user's target roles (comma-separated keywords)
+    const userRoleKeywords = targetRoles
+      .split(/[,;]/)
+      .map(k => k.trim())
+      .filter(k => k.length > 0);
+
+    // Check exact tech stack matches (higher priority)
+    userTechKeywords.forEach(keyword => {
+      if (jobText.includes(keyword.toLowerCase())) {
+        const weight = skillWeightMap[keyword.toLowerCase()] || 20;
+        score += weight;
+        matched.push({ text: keyword, type: 'tech', weight });
+        matchDetails.push(`+${weight} for "${keyword}" (tech stack match)`);
+      }
+    });
+
+    // Check target role keyword matches
+    userRoleKeywords.forEach(keyword => {
+      if (jobText.includes(keyword.toLowerCase())) {
+        const weight = 15; // Target roles get fixed 15 points
+        score += weight;
+        matched.push({ text: keyword, type: 'role', weight });
+        matchDetails.push(`+${weight} for "${keyword}" (target role match)`);
+      }
+    });
+
+    // Check hard-coded skill map for partial matches not in profile
+    Object.entries(skillWeightMap).forEach(([keyword, weight]) => {
+      // Only add if not already matched via profile keywords
+      if (!matched.find(m => m.text.toLowerCase() === keyword.toLowerCase())) {
+        if (jobText.includes(keyword)) {
+          score += weight;
+          matched.push({ text: keyword, type: 'skill', weight, isPartial: true });
+          matchDetails.push(`+${weight} for "${keyword}" (common skill match)`);
+        }
+      }
+    });
+
+    // Cap at 100
+    score = Math.min(100, score);
+
+    const reason = matched.length > 0
+      ? `Match: ${matched.slice(0, 3).map(m => m.text).join(', ')}${matched.length > 3 ? ' +' + (matched.length - 3) : ''}`
+      : 'No matching keywords found';
+
+    return {
+      score,
+      reason,
+      matched,
+      explanation: matchDetails.length > 0
+        ? matchDetails.join('; ') + `; Total: ${score}/100`
+        : 'No keyword matches. Review your profile tech stack and target roles.',
+    };
   }
+
   function generateFitReason(company, role) {
-    return scoreJob(role, []).reason;
+    const result = scoreJob(role, company);
+    return result.reason;
   }
-  return { scoreJob, generateFitReason };
+
+  function getScoreColor(score) {
+    if (score >= 80) return '#10b981'; // green
+    if (score >= 60) return '#3b82f6'; // blue
+    if (score >= 40) return '#f59e0b'; // amber
+    return '#ef4444'; // red
+  }
+
+  return { scoreJob, generateFitReason, getScoreColor };
 })();
 
 /* ============================================================ */
@@ -1563,23 +1655,32 @@ const UIRenderer = (() => {
       return;
     }
 
-    const rows = jobs.map((j, i) => `<tr>
-      <td>${i + 1}</td>
-      <td><input type="checkbox" class="job-cb" data-id="${j.id}" onchange="toggleBulkDelete()"></td>
-      <td style="font-weight:500">${j.company || ''}</td>
-      <td>${j.role || ''}</td>
-      <td><span class="pill ${portalColor(j.portal)}">${j.portal || ''}</span></td>
-      <td>${j.apply_link ? `<a href="${j.apply_link}" target="_blank" rel="noopener"><i data-lucide="external-link" style="width:14px;height:14px"></i></a>` : ''}</td>
-      <td><select class="inline-select ${statusColor(j.status)}" onchange="updateJobStatus('${j.id}',this.value)">${['Applied','Screening','Interview','Offer','Rejected'].map(s => `<option value="${s}" ${j.status===s?'selected':''}>${s}</option>`).join('')}</select></td>
-      <td>${j.hr_name || ''}</td>
-      <td>${j.hr_linkedin ? `<a href="${j.hr_linkedin}" target="_blank" rel="noopener"><i data-lucide="linkedin" style="width:14px;height:14px"></i></a>` : ''}</td>
-      <td style="color:var(--color-muted);font-size:12px">${relativeTime(j.date_added)}</td>
-      <td title="${j.notes || ''}">${truncate(j.notes, 40)}</td>
-      <td><button class="action-btn" onclick="editJob('${j.id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i></button><button class="action-btn" onclick="deleteJob('${j.id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></td>
-    </tr>`).join('');
+    const rows = jobs.map((j, i) => {
+      const scoreData = AIService.scoreJob(j.role, j.company);
+      const scoreColor = AIService.getScoreColor(scoreData.score);
+      const matchedKeywordsHTML = scoreData.matched.length > 0
+        ? scoreData.matched.slice(0, 3).map(m => `<span class="pill" style="background-color:${m.type === 'tech' ? 'var(--color-accent)' : m.type === 'role' ? '#10b981' : '#f59e0b'};color:white;font-size:10px;padding:2px 6px;margin-right:4px;margin-bottom:4px;display:inline-block">${m.text}</span>`).join('')
+        : '<span style="font-size:11px;color:var(--color-muted)">No matches</span>';
+
+      return `<tr>
+        <td>${i + 1}</td>
+        <td><input type="checkbox" class="job-cb" data-id="${j.id}" onchange="toggleBulkDelete()"></td>
+        <td style="font-weight:500">${j.company || ''}</td>
+        <td>${j.role || ''}</td>
+        <td><span class="pill ${portalColor(j.portal)}">${j.portal || ''}</span></td>
+        <td>${j.apply_link ? `<a href="${j.apply_link}" target="_blank" rel="noopener"><i data-lucide="external-link" style="width:14px;height:14px"></i></a>` : ''}</td>
+        <td><select class="inline-select ${statusColor(j.status)}" onchange="updateJobStatus('${j.id}',this.value)">${['Applied','Screening','Interview','Offer','Rejected'].map(s => `<option value="${s}" ${j.status===s?'selected':''}>${s}</option>`).join('')}</select></td>
+        <td>${j.hr_name || ''}</td>
+        <td>${j.hr_linkedin ? `<a href="${j.hr_linkedin}" target="_blank" rel="noopener"><i data-lucide="linkedin" style="width:14px;height:14px"></i></a>` : ''}</td>
+        <td style="color:var(--color-muted);font-size:12px">${relativeTime(j.date_added)}</td>
+        <td style="text-align:center;cursor:help" title="Why this score? ${scoreData.explanation.replace(/"/g, '&quot;')}"><div style="display:inline-block;background-color:${scoreColor};color:white;padding:4px 8px;border-radius:4px;font-weight:600;font-size:13px">${scoreData.score}</div><div style="font-size:10px;margin-top:4px">${matchedKeywordsHTML}</div></td>
+        <td title="${j.notes || ''}">${truncate(j.notes, 40)}</td>
+        <td><button class="action-btn" onclick="editJob('${j.id}')"><i data-lucide="pencil" style="width:14px;height:14px"></i></button><button class="action-btn" onclick="deleteJob('${j.id}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></td>
+      </tr>`;
+    }).join('');
 
     document.getElementById('jobsTableWrapper').innerHTML = `<table class="data-table"><thead><tr>
-      <th>#</th><th><input type="checkbox" onchange="selectAllJobs(this)"></th><th>Company</th><th>Role</th><th>Portal</th><th>Link</th><th>Status</th><th>HR</th><th>LI</th><th>Added</th><th>Notes</th><th>Actions</th>
+      <th>#</th><th><input type="checkbox" onchange="selectAllJobs(this)"></th><th>Company</th><th>Role</th><th>Portal</th><th>Link</th><th>Status</th><th>HR</th><th>LI</th><th>Added</th><th style="text-align:center">Fit Score<br><span style="font-size:10px;font-weight:normal;color:var(--color-muted)">(hover for details)</span></th><th>Notes</th><th>Actions</th>
     </tr></thead><tbody>${rows}</tbody></table>`;
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
@@ -1605,21 +1706,30 @@ const UIRenderer = (() => {
       return;
     }
 
-    const rows = queue.map((q, i) => `<tr>
-      <td>${i + 1}</td>
-      <td style="font-weight:500">${q.company || ''}</td>
-      <td>${q.role || ''}</td>
-      <td style="font-size:12px;max-width:200px">${q.fit_reason || ''}</td>
-      <td>${q.apply_link ? `<a href="${q.apply_link}" target="_blank" rel="noopener"><i data-lucide="external-link" style="width:14px;height:14px"></i></a>` : ''}</td>
-      <td><span class="pill ${portalColor(q.portal)}">${q.portal || ''}</span></td>
-      <td><span class="pill ${difficultyColor(q.difficulty)}">${q.difficulty || ''}</span></td>
-      <td><span class="pill ${q.priority === 'High' ? 'pill-teal' : 'pill-gray'}">${q.priority || ''}</span></td>
-      <td><select class="inline-select ${statusColor(q.status)}" onchange="updateQueueStatus('${q.id}',this.value)">${['To Apply','Applied','Skipped'].map(s => `<option value="${s}" ${q.status===s?'selected':''}>${s}</option>`).join('')}</select></td>
-      <td>${q.status !== 'Applied' && q.apply_link ? `<button class="btn-primary" onclick="applyNow('${q.id}','${encodeURIComponent(q.apply_link)}')">Apply Now</button>` : (q.status === 'Applied' ? '<span class="checkmark-anim"><i data-lucide="check-circle" style="width:20px;height:20px"></i></span>' : '')}</td>
-    </tr>`).join('');
+    const rows = queue.map((q, i) => {
+      const scoreData = AIService.scoreJob(q.role, q.company);
+      const scoreColor = AIService.getScoreColor(scoreData.score);
+      const matchedKeywordsHTML = scoreData.matched.length > 0
+        ? scoreData.matched.slice(0, 2).map(m => `<span class="pill" style="background-color:${m.type === 'tech' ? 'var(--color-accent)' : m.type === 'role' ? '#10b981' : '#f59e0b'};color:white;font-size:9px;padding:2px 5px;margin-right:3px;display:inline-block">${m.text}</span>`).join('')
+        : '';
+
+      return `<tr>
+        <td>${i + 1}</td>
+        <td style="font-weight:500">${q.company || ''}</td>
+        <td>${q.role || ''}</td>
+        <td style="font-size:12px;max-width:200px">${q.fit_reason || ''}</td>
+        <td>${q.apply_link ? `<a href="${q.apply_link}" target="_blank" rel="noopener"><i data-lucide="external-link" style="width:14px;height:14px"></i></a>` : ''}</td>
+        <td><span class="pill ${portalColor(q.portal)}">${q.portal || ''}</span></td>
+        <td><span class="pill ${difficultyColor(q.difficulty)}">${q.difficulty || ''}</span></td>
+        <td><span class="pill ${q.priority === 'High' ? 'pill-teal' : 'pill-gray'}">${q.priority || ''}</span></td>
+        <td><span class="pill" style="background-color:${scoreColor};color:white;font-size:11px;padding:3px 7px;cursor:help" title="Why this score? ${scoreData.explanation.replace(/"/g, '&quot;')}">${scoreData.score}<br>${matchedKeywordsHTML}</span></td>
+        <td><select class="inline-select ${statusColor(q.status)}" onchange="updateQueueStatus('${q.id}',this.value)">${['To Apply','Applied','Skipped'].map(s => `<option value="${s}" ${q.status===s?'selected':''}>${s}</option>`).join('')}</select></td>
+        <td>${q.status !== 'Applied' && q.apply_link ? `<button class="btn-primary" onclick="applyNow('${q.id}','${encodeURIComponent(q.apply_link)}')">Apply Now</button>` : (q.status === 'Applied' ? '<span class="checkmark-anim"><i data-lucide="check-circle" style="width:20px;height:20px"></i></span>' : '')}</td>
+      </tr>`;
+    }).join('');
 
     document.getElementById('queueTableWrapper').innerHTML = `<table class="data-table"><thead><tr>
-      <th>#</th><th>Company</th><th>Role</th><th>Why You're a Fit</th><th>Link</th><th>Portal</th><th>Difficulty</th><th>Priority</th><th>Status</th><th>Action</th>
+      <th>#</th><th>Company</th><th>Role</th><th>Why You're a Fit</th><th>Link</th><th>Portal</th><th>Difficulty</th><th>Priority</th><th>Fit Score</th><th>Status</th><th>Action</th>
     </tr></thead><tbody>${rows}</tbody></table>`;
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
