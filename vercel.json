@@ -43,7 +43,6 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "envPrefix": "KIRA_"
+  }
 }
 
