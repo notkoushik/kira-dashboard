@@ -90,9 +90,45 @@ export class JobService {
   }
 
   /**
+   * Check for duplicate job (same company + role for user, case-insensitive)
+   */
+  static async checkDuplicate(userId: string, company: string, role: string): Promise<{ isDuplicate: boolean; existingId?: string; existingStatus?: string } | null> {
+    const { data: jobs, error } = await supabase
+      .from('jobs')
+      .select('id, status, company, role')
+      .eq('user_id', userId)
+      .ilike('company', company)
+      .ilike('role', role);
+
+    if (error) {
+      logger.error({ error, userId, company, role }, 'Failed to check duplicate');
+      throw createError('Failed to check for duplicates', 500, 'DB_ERROR');
+    }
+
+    if (jobs && jobs.length > 0) {
+      const existing = jobs[0];
+      return {
+        isDuplicate: true,
+        existingId: existing.id,
+        existingStatus: existing.status,
+      };
+    }
+
+    return { isDuplicate: false };
+  }
+
+  /**
    * Create a new job
    */
-  static async createJob(userId: string, jobData: any): Promise<Job> {
+  static async createJob(userId: string, jobData: any, force: boolean = false): Promise<Job | { isDuplicate: boolean; existingId?: string; existingStatus?: string }> {
+    // Check for duplicates unless force flag is set
+    if (!force) {
+      const duplicateCheck = await this.checkDuplicate(userId, jobData.company, jobData.role);
+      if (duplicateCheck?.isDuplicate) {
+        return duplicateCheck;
+      }
+    }
+
     const { data: job, error } = await supabase
       .from('jobs')
       .insert({

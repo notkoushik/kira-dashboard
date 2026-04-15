@@ -86,16 +86,35 @@ router.get(
 /**
  * POST /api/v1/jobs
  * Create a new job
+ * Query params:
+ *   - force=true: Skip duplicate check and insert anyway
  */
 router.post(
   '/',
   validateRequest(JobSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const job = await JobService.createJob(req.userId!, req.body);
+    const force = req.query.force === 'true';
+    const result = await JobService.createJob(req.userId!, req.body, force);
 
+    // Check if result is a duplicate response
+    if ('isDuplicate' in result && result.isDuplicate) {
+      return res.status(409).json({
+        success: false,
+        error: 'Duplicate job found',
+        code: 'DUPLICATE_JOB',
+        data: {
+          isDuplicate: true,
+          existingId: result.existingId,
+          existingStatus: result.existingStatus,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Otherwise, it's a normal Job object
     res.status(201).json({
       success: true,
-      data: job,
+      data: result,
       timestamp: new Date().toISOString(),
     });
   })

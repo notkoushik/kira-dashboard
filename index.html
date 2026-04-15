@@ -965,6 +965,27 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
   </div>
 </div>
 
+<!-- Duplicate Job Warning Modal -->
+<div class="modal-overlay hidden" id="duplicateModal">
+  <div class="modal-content glass-modal" style="max-width:520px">
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:4px">Duplicate Job Detected</h3>
+    <p style="font-size:13px;color:var(--color-muted);margin-bottom:16px">You already applied to this position</p>
+    <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-card);padding:16px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:14px;font-weight:600" id="dupCompany"></span>
+        <span class="pill" id="dupStatus" style="align-self:flex-start"></span>
+      </div>
+      <div style="font-size:13px;color:var(--color-muted)"><span id="dupRole"></span></div>
+    </div>
+    <p style="font-size:12px;color:var(--color-muted);margin-bottom:16px">What would you like to do?</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn-primary" onclick="updateExistingJob()" style="flex:1"><i data-lucide="edit" style="width:14px;height:14px"></i> Update Existing</button>
+      <button class="btn-secondary" onclick="addAnywayJob()" style="flex:1"><i data-lucide="plus" style="width:14px;height:14px"></i> Add Anyway</button>
+      <button class="btn-secondary" onclick="closeDuplicateModal()" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Reset Modal -->
 <div class="modal-overlay hidden" id="resetModal">
   <div class="modal-content">
@@ -1689,11 +1710,113 @@ const submitJob = MonitorService.wrap(async function() {
     notes: document.getElementById('jfNotes').value,
   };
   if (!data.company || !data.role) { showToast('Company and Role are required', 'error'); return; }
-  if (id) { await DataService.update('jobs', id, data); showToast('Job updated', 'success'); }
-  else { await DataService.insert('jobs', data); showToast('Job added ✓', 'success'); }
-  closeJobDrawer();
-  await loadData();
+
+  if (id) {
+    // Editing existing job - use Supabase directly
+    await DataService.update('jobs', id, data);
+    showToast('Job updated', 'success');
+    closeJobDrawer();
+    await loadData();
+  } else {
+    // Creating new job - use backend API to check for duplicates
+    try {
+      const token = localStorage.getItem('jwt_token');
+      const response = await fetch(`${window.API_BASE_URL || 'http://localhost:3000'}/api/v1/jobs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.status === 409) {
+        // Duplicate job detected
+        const result = await response.json();
+        if (result.data?.isDuplicate) {
+          showDuplicateModal(data, result.data);
+        }
+        return;
+      }
+
+      if (!response.ok) {
+        const error = await response.json();
+        showToast(error.error || 'Failed to create job', 'error');
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        showToast('Job added ✓', 'success');
+        closeJobDrawer();
+        await loadData();
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to create job', 'error');
+    }
+  }
 });
+let currentDuplicateData = null;
+let currentDuplicateInfo = null;
+
+function showDuplicateModal(jobData, duplicateInfo) {
+  currentDuplicateData = jobData;
+  currentDuplicateInfo = duplicateInfo;
+  document.getElementById('dupCompany').textContent = jobData.company;
+  document.getElementById('dupRole').textContent = jobData.role;
+
+  const statusPill = document.getElementById('dupStatus');
+  statusPill.textContent = duplicateInfo.existingStatus || 'Unknown';
+  statusPill.className = `pill ${UIRenderer.statusColor(duplicateInfo.existingStatus)}`;
+
+  document.getElementById('duplicateModal').classList.remove('hidden');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeDuplicateModal() {
+  document.getElementById('duplicateModal').classList.add('hidden');
+  currentDuplicateData = null;
+  currentDuplicateInfo = null;
+}
+
+function updateExistingJob() {
+  closeDuplicateModal();
+  if (currentDuplicateInfo?.existingId) {
+    editJob(currentDuplicateInfo.existingId);
+  }
+}
+
+const addAnywayJob = MonitorService.wrap(async function() {
+  if (!currentDuplicateData) return;
+  try {
+    const token = localStorage.getItem('jwt_token');
+    const response = await fetch(`${window.API_BASE_URL || 'http://localhost:3000'}/api/v1/jobs?force=true`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(currentDuplicateData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      showToast(error.error || 'Failed to create job', 'error');
+      return;
+    }
+
+    const result = await response.json();
+    if (result.success) {
+      showToast('Job added (duplicate allowed) ✓', 'success');
+      closeDuplicateModal();
+      closeJobDrawer();
+      await loadData();
+    }
+  } catch (err) {
+    showToast(err.message || 'Failed to create job', 'error');
+  }
+});
+
 const deleteJob = MonitorService.wrap(async function(id) {
   if (!confirm('Delete this job?')) return;
   await DataService.remove('jobs', id);
