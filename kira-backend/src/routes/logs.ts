@@ -51,6 +51,24 @@ router.get(
 );
 
 /**
+ * GET /api/v1/logs/streak/current
+ * Calculate current consecutive day streak (real date gap detection)
+ * MUST be before /:id route to avoid being matched as an ID
+ */
+router.get(
+  '/streak/current',
+  asyncHandler(async (req: Request, res: Response) => {
+    const streak = await DailyLogService.getCurrentStreak(req.userId!);
+
+    res.status(200).json({
+      success: true,
+      data: streak,
+      timestamp: new Date().toISOString(),
+    });
+  })
+);
+
+/**
  * GET /api/v1/logs/:id
  * Get single daily log
  */

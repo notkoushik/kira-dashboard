@@ -179,4 +179,87 @@ export class DailyLogService {
 
     return stats;
   }
+
+  /**
+   * Get current consecutive day streak using SQL date gap detection
+   * Works backward from today to find unbroken chain of consecutive dates
+   */
+  static async getCurrentStreak(userId: string) {
+    // Get all logs sorted by date descending
+    const { data: logs, error } = await supabase
+      .from('daily_logs')
+      .select('log_date')
+      .eq('user_id', userId)
+      .order('log_date', { ascending: false });
+
+    if (error) {
+      logger.error({ error, userId }, 'Failed to get current streak');
+      throw createError('Failed to calculate streak', 500, 'DB_ERROR');
+    }
+
+    if (!logs || logs.length === 0) {
+      return {
+        currentStreak: 0,
+        lastLogDate: null,
+        streakDates: [],
+      };
+    }
+
+    // Sort dates (descending)
+    const dates: string[] = logs.map(log => log.log_date).sort().reverse();
+
+    // Get today's date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    let streakCount = 0;
+    let currentDate = new Date(todayStr);
+    const streakDates: string[] = [];
+
+    // Work backward from today
+    for (const dateStr of dates) {
+      const checkDate = new Date(dateStr);
+      checkDate.setHours(0, 0, 0, 0);
+
+      const currentDateStr = currentDate.toISOString().split('T')[0];
+
+      // If dates match, increment streak
+      if (checkDate.toISOString().split('T')[0] === currentDateStr) {
+        streakCount++;
+        streakDates.push(dateStr);
+        // Move to previous day
+        currentDate.setDate(currentDate.getDate() - 1);
+      } else {
+        // Gap found - stop counting
+        break;
+      }
+    }
+
+    // If today is not in the logs, the streak is broken
+    const lastLogDate = dates[0];
+    const lastLogDateObj = new Date(lastLogDate);
+    lastLogDateObj.setHours(0, 0, 0, 0);
+
+    if (lastLogDateObj.toISOString().split('T')[0] !== todayStr) {
+      // Check if it was yesterday
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      if (lastLogDateObj.toISOString().split('T')[0] === yesterdayStr) {
+        // Streak continues but today hasn't been logged yet
+      } else {
+        // Streak is broken
+        streakCount = 0;
+        streakDates.length = 0;
+      }
+    }
+
+    return {
+      currentStreak: streakCount,
+      lastLogDate: lastLogDate || null,
+      streakDates: streakDates.reverse(), // Return in ascending order
+    };
+  }
 }

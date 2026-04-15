@@ -724,7 +724,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     <button class="tab-btn" data-tab="jobs" onclick="switchTab('jobs')"><i data-lucide="briefcase" style="width:16px;height:16px"></i><span class="tab-label">Jobs</span></button>
     <button class="tab-btn" data-tab="queue" onclick="switchTab('queue')"><i data-lucide="list-ordered" style="width:16px;height:16px"></i><span class="tab-label">Queue</span></button>
     <button class="tab-btn" data-tab="hr" onclick="switchTab('hr')"><i data-lucide="users" style="width:16px;height:16px"></i><span class="tab-label">HR</span></button>
-    <button class="tab-btn" data-tab="inbox" onclick="switchTab('inbox')"><i data-lucide="mail" style="width:16px;height:16px"></i><span class="tab-label">Inbox</span><span class="badge" id="inboxBadge" style="display:none">0</span></button>
+    <button class="tab-btn" data-tab="inbox" onclick="switchTab('inbox')"><i data-lucide="mail" style="width:16px;height:16px"></i><span class="tab-label">Inbox</span><span class="badge" style="background-color:#f59e0b;font-size:10px;padding:2px 6px;border-radius:3px;margin-left:6px">BETA</span></button>
     <button class="tab-btn" data-tab="analytics" onclick="switchTab('analytics')"><i data-lucide="bar-chart-3" style="width:16px;height:16px"></i><span class="tab-label">Analytics</span></button>
     <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')"><i data-lucide="settings" style="width:16px;height:16px"></i><span class="tab-label">Settings</span></button>
   </nav>
@@ -814,8 +814,42 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 
     <!-- TAB 6: INBOX MONITOR -->
     <div class="tab-panel" id="panel-inbox">
-      <h2 style="font-size:18px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px"><i data-lucide="inbox" style="width:20px;height:20px;color:var(--color-accent)"></i> Inbox Monitor</h2>
-      <div id="inboxCards"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div>
+      <div style="text-align:center;padding:60px 20px">
+        <div style="margin-bottom:24px"><i data-lucide="mail-open" style="width:48px;height:48px;color:var(--color-accent);margin:0 auto;display:block"></i></div>
+        <h2 style="font-size:20px;font-weight:600;margin-bottom:8px;color:var(--color-text)">Gmail Integration Coming Soon</h2>
+        <p style="font-size:14px;color:var(--color-muted);margin-bottom:32px;max-width:500px;margin-left:auto;margin-right:auto">
+          KIRA will monitor your inbox for interview calls, offer letters, and recruiter replies automatically. Stay tuned for seamless email integration.
+        </p>
+        <button style="background-color:var(--color-accent);opacity:0.5;cursor:not-allowed;color:white;border:none;padding:12px 24px;border-radius:6px;font-weight:500;font-size:14px;margin-bottom:48px">
+          <i data-lucide="mail" style="width:16px;height:16px;margin-right:8px;vertical-align:middle"></i> Connect Gmail (Coming Soon)
+        </button>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:32px">
+          <div style="background:var(--color-card);border:1px solid var(--color-border);border-radius:8px;padding:16px">
+            <div style="font-size:12px;font-weight:600;color:var(--color-accent);margin-bottom:8px;text-transform:uppercase">
+              <i data-lucide="video" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"></i> Interview Invites
+            </div>
+            <p style="font-size:12px;color:var(--color-muted)">Auto-detect and track interview calls from recruiters</p>
+          </div>
+          <div style="background:var(--color-card);border:1px solid var(--color-border);border-radius:8px;padding:16px">
+            <div style="font-size:12px;font-weight:600;color:#10b981;margin-bottom:8px;text-transform:uppercase">
+              <i data-lucide="trophy" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"></i> Offer Letters
+            </div>
+            <p style="font-size:12px;color:var(--color-muted)">Capture and celebrate offer announcements instantly</p>
+          </div>
+          <div style="background:var(--color-card);border:1px solid var(--color-border);border-radius:8px;padding:16px">
+            <div style="font-size:12px;font-weight:600;color:#f59e0b;margin-bottom:8px;text-transform:uppercase">
+              <i data-lucide="send" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"></i> Follow-ups
+            </div>
+            <p style="font-size:12px;color:var(--color-muted)">Monitor recruiter follow-ups and status updates</p>
+          </div>
+          <div style="background:var(--color-card);border:1px solid var(--color-border);border-radius:8px;padding:16px">
+            <div style="font-size:12px;font-weight:600;color:#ef4444;margin-bottom:8px;text-transform:uppercase">
+              <i data-lucide="x-circle" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"></i> Rejections
+            </div>
+            <p style="font-size:12px;color:var(--color-muted)">Track rejections and feedback gracefully</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- TAB 7: ANALYTICS -->
@@ -1206,6 +1240,62 @@ const APIClient = (() => {
       }),
 
     getQueueStats: () => apiCall('/queue/stats/summary'),
+
+    // Daily Logs endpoints
+    getLogs: (filters = {}) => {
+      const params = new URLSearchParams();
+      if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
+      if (filters.dateTo) params.append('dateTo', filters.dateTo);
+      if (filters.skip) params.append('skip', filters.skip);
+      if (filters.limit) params.append('limit', filters.limit);
+      return apiCall(`/logs?${params}`);
+    },
+
+    createLog: (data) =>
+      apiCall('/logs', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+
+    updateLog: (id, updates) =>
+      apiCall(`/logs/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      }),
+
+    deleteLog: (id) =>
+      apiCall(`/logs/${id}`, { method: 'DELETE' }),
+
+    getLogStats: () => apiCall('/logs/stats/summary'),
+
+    getCurrentStreak: () => apiCall('/logs/streak/current'),
+
+    // Planner Tasks endpoints
+    getPlannerTasks: (filters = {}) => {
+      const params = new URLSearchParams();
+      if (filters.taskDate) params.append('taskDate', filters.taskDate);
+      if (filters.completed !== undefined) params.append('completed', filters.completed);
+      if (filters.skip) params.append('skip', filters.skip);
+      if (filters.limit) params.append('limit', filters.limit);
+      return apiCall(`/planner?${params}`);
+    },
+
+    createPlannerTask: (data) =>
+      apiCall('/planner', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+
+    updatePlannerTask: (id, updates) =>
+      apiCall(`/planner/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      }),
+
+    deletePlannerTask: (id) =>
+      apiCall(`/planner/${id}`, { method: 'DELETE' }),
+
+    getPlannerStats: () => apiCall('/planner/stats/summary'),
   };
 })();
 
@@ -1401,12 +1491,21 @@ const UIRenderer = (() => {
   }
 
   /* --- TAB 2: DAILY PLANNER --- */
-  function renderStreak(logs) {
-    const todayLog = (logs || []).find(l => new Date(l.log_date).toDateString() === new Date().toDateString());
-    const streak = todayLog ? (todayLog.streak_count || 1) : 0;
-    document.getElementById('streakArea').innerHTML = streak > 0
-      ? `<div class="streak-number">${streak}</div><div class="streak-label">🔥 day streak</div>`
-      : `<div style="font-size:18px;font-weight:600;color:var(--color-muted)">Start your streak today 💪</div>`;
+  function renderStreak() {
+    try {
+      // Fetch current streak from backend API using date gap detection
+      return (async () => {
+        const streakData = await APIClient.getCurrentStreak();
+        const streak = streakData.currentStreak || 0;
+
+        document.getElementById('streakArea').innerHTML = streak > 0
+          ? `<div class="streak-number">${streak}</div><div class="streak-label">🔥 day streak</div>`
+          : `<div style="font-size:18px;font-weight:600;color:var(--color-muted)">Start your streak today 💪</div>`;
+      })();
+    } catch (err) {
+      console.error('Failed to render streak:', err);
+      document.getElementById('streakArea').innerHTML = `<div style="font-size:18px;font-weight:600;color:var(--color-muted)">Start your streak today 💪</div>`;
+    }
   }
 
   function renderPlannerCards(tasks) {
@@ -1568,37 +1667,6 @@ const UIRenderer = (() => {
     if (typeof lucide !== 'undefined') lucide.createIcons();
   }
 
-  /* --- TAB 6: INBOX --- */
-  function renderInbox(emails) {
-    if (!emails || !emails.length) {
-      document.getElementById('inboxCards').innerHTML = '<div class="empty-state"><p>No matching emails found. Check back later.</p></div>';
-      return;
-    }
-    const colors = ['#00b4d8','#8b5cf6','#10b981','#f59e0b','#3b82f6','#ef4444'];
-    document.getElementById('inboxCards').innerHTML = emails.map((e, i) => {
-      const initial = (e.sender || 'U')[0].toUpperCase();
-      const bg = colors[i % colors.length];
-      return `<div class="email-card">
-        <div class="email-avatar" style="background:${bg}20;color:${bg}">${initial}</div>
-        <div class="email-content">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span class="email-sender">${e.sender || ''}</span>
-            <span class="email-date">${relativeTime(e.date)}</span>
-          </div>
-          <div class="email-company">${e.company || ''}</div>
-          <div class="email-subject">${e.subject || ''}</div>
-          <div class="email-preview">${truncate(e.preview, 120)}</div>
-          <div class="email-actions">
-            <button class="btn-primary" style="font-size:11px;padding:4px 10px" onclick="markAsInterview('${e.company}')"><i data-lucide="video" style="width:12px;height:12px"></i> Mark Interview</button>
-            <button class="btn-secondary" style="font-size:11px;padding:4px 10px" onclick="openReplyDraft('${encodeURIComponent(e.sender)}','${encodeURIComponent(e.company)}')"><i data-lucide="reply" style="width:12px;height:12px"></i> Draft Reply</button>
-          </div>
-        </div>
-        <span class="pill ${e.read ? 'pill-gray' : 'pill-teal'}" style="align-self:start">${e.read ? 'Read' : 'New'}</span>
-      </div>`;
-    }).join('');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  }
-
   /* --- TAB 7: ANALYTICS --- */
   function renderCharts(state) {
     const jobs = state.jobs || [];
@@ -1683,7 +1751,7 @@ const UIRenderer = (() => {
     ].map(s => `<div class="status-item"><span class="status-dot-sm ${s.status}"></span><span>${s.name}</span><span style="margin-left:auto;font-size:11px;color:var(--color-muted)">${s.detail}</span></div>`).join('');
   }
 
-  return { renderGreeting, renderKPIs, renderProgressRing, renderTimeline, renderQuote, renderStreak, renderPlannerCards, renderJobStatusBar, renderJobsTable, renderQueueProgress, renderQueueTable, renderHRTable, renderInbox, renderCharts, renderSystemStatus, relativeTime, statusColor };
+  return { renderGreeting, renderKPIs, renderProgressRing, renderTimeline, renderQuote, renderStreak, renderPlannerCards, renderJobStatusBar, renderJobsTable, renderQueueProgress, renderQueueTable, renderHRTable, renderCharts, renderSystemStatus, relativeTime, statusColor };
 })();
 
 /* ============================================================ */
@@ -1725,35 +1793,67 @@ setInterval(() => { const el = document.getElementById('liveClock'); if (el) el.
 const saveWorkLog = MonitorService.wrap(async function() {
   const text = document.getElementById('workLogInput').value.trim();
   if (!text) { showToast('Please enter a log', 'error'); return; }
-  const today = new Date().toISOString().split('T')[0];
-  const tasks = (StateManager.getState().planner_tasks || []).filter(t => t.task_date === today && t.completed).length;
-  const logs = StateManager.getState().daily_logs || [];
-  const streak = logs.length + 1;
-  await DataService.insert('daily_logs', { log_text: text, log_date: today, tasks_completed: tasks, streak_count: streak });
-  document.getElementById('workLogInput').value = '';
-  showToast('Work log saved', 'success');
-  EventBus.emit('log:saved');
-  await loadData();
+
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const tasks = (StateManager.getState().planner_tasks || []).filter(t => t.task_date === today && t.completed).length;
+
+    const logData = {
+      log_text: text,
+      log_date: today,
+      tasks_completed: tasks,
+    };
+
+    await APIClient.createLog(logData);
+    document.getElementById('workLogInput').value = '';
+    showToast('Work log saved', 'success');
+    EventBus.emit('log:saved');
+    await loadData();
+  } catch (err) {
+    showToast(err.message || 'Failed to save work log', 'error');
+  }
 });
 
 /* --- PLANNER --- */
 const markPlannerDone = MonitorService.wrap(async function(slot, taskId) {
-  if (taskId) {
-    await DataService.update('planner_tasks', taskId, { completed: true, completed_at: new Date().toISOString() });
-  } else {
-    await DataService.insert('planner_tasks', { task_slot: slot, completed: true, completed_at: new Date().toISOString(), task_date: new Date().toISOString().split('T')[0] });
+  try {
+    if (taskId) {
+      await APIClient.updatePlannerTask(taskId, { completed: true, completed_at: new Date().toISOString() });
+    } else {
+      await APIClient.createPlannerTask({
+        task_slot: slot,
+        completed: true,
+        completed_at: new Date().toISOString(),
+        task_date: new Date().toISOString().split('T')[0]
+      });
+    }
+    showToast('Task completed', 'success');
+    EventBus.emit('task:completed');
+    await loadData();
+  } catch (err) {
+    showToast(err.message || 'Failed to update task', 'error');
   }
-  showToast('Task completed', 'success');
-  EventBus.emit('task:completed');
-  await loadData();
 });
 
 async function ensurePlannerTasks() {
-  const today = new Date().toISOString().split('T')[0];
-  const existing = await DataService.fetchAll('planner_tasks', { eq: { task_date: today } });
-  if (existing.length === 0) {
-    const slots = ['8:00 AM', '10:00 AM', '12:00 PM', '6:00 PM'];
-    await DataService.bulkInsert('planner_tasks', slots.map(s => ({ task_slot: s, task_date: today, completed: false })));
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    // Fetch tasks for today
+    const result = await APIClient.getPlannerTasks({ taskDate: today });
+    const existing = result.items || result || [];
+
+    if (existing.length === 0) {
+      const slots = ['8:00 AM', '10:00 AM', '12:00 PM', '6:00 PM'];
+      for (const slot of slots) {
+        await APIClient.createPlannerTask({
+          task_slot: slot,
+          task_date: today,
+          completed: false
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Failed to ensure planner tasks:', err);
   }
 }
 
@@ -2031,14 +2131,9 @@ const saveDraft = MonitorService.wrap(async function() {
 });
 
 /* --- INBOX / REPLY --- */
-let inboxEmails = [];
 const loadInbox = MonitorService.wrap(async function() {
-  // Show sample data for now — real Gmail integration handled via connector
-  inboxEmails = [
-    { sender: 'Priya Sharma', company: 'TCS', subject: 'Application Update - Flutter Developer', date: new Date().toISOString(), preview: 'Thank you for your application. We would like to schedule an interview...', read: false },
-    { sender: 'Recruiter', company: 'Infosys', subject: 'Opportunity - Software Engineer', date: new Date(Date.now() - 86400000).toISOString(), preview: 'We came across your profile and found it interesting for our current opening...', read: true },
-  ];
-  UIRenderer.renderInbox(inboxEmails);
+  // Gmail integration coming soon - no email data loaded yet
+  // This will be populated once Gmail connector is implemented
   if (typeof lucide !== 'undefined') lucide.createIcons();
 });
 
@@ -2170,9 +2265,13 @@ const loadData = MonitorService.wrap(async function() {
     const queueResult = await APIClient.getQueue({ limit: 100 });
     const queue = queueResult.items || queueResult; // Handle different response formats
 
-    // For now, logs and tasks are stored in localStorage
-    const logs = JSON.parse(localStorage.getItem('daily_logs') || '[]');
-    const tasks = JSON.parse(localStorage.getItem('planner_tasks') || '[]');
+    // Fetch daily logs from backend API (last 90 days)
+    const logsResult = await APIClient.getLogs({ limit: 100 });
+    const logs = logsResult.items || logsResult; // Handle different response formats
+
+    // Fetch planner tasks from backend API
+    const tasksResult = await APIClient.getPlannerTasks({ limit: 100 });
+    const tasks = tasksResult.items || tasksResult; // Handle different response formats
 
     StateManager.setState('jobs', jobs);
     StateManager.setState('hr_contacts', hrs);
@@ -2184,7 +2283,7 @@ const loadData = MonitorService.wrap(async function() {
     UIRenderer.renderKPIs(state);
     UIRenderer.renderProgressRing(state);
     UIRenderer.renderTimeline(state.daily_logs);
-    UIRenderer.renderStreak(state.daily_logs);
+    await UIRenderer.renderStreak(); // Now async - fetches from API
     UIRenderer.renderPlannerCards(state.planner_tasks);
     UIRenderer.renderJobStatusBar(state.jobs);
     UIRenderer.renderJobsTable();
