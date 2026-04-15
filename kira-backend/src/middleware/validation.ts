@@ -73,11 +73,11 @@ export const PlannerTaskSchema = z.object({
 // ============================================
 
 export function validateRequest(schema: z.ZodSchema) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction): any => {
     try {
       const validated = schema.parse(req.body);
       req.body = validated;
-      next();
+      return next();
     } catch (err: any) {
       if (err instanceof z.ZodError) {
         logger.warn({ errors: err.errors }, 'Validation error');
@@ -134,7 +134,7 @@ export function sanitizeObject(obj: any): any {
   return obj;
 }
 
-export function sanitizeRequestBody(req: Request, res: Response, next: NextFunction) {
+export function sanitizeRequestBody(req: Request, _res: Response, next: NextFunction) {
   req.body = sanitizeObject(req.body);
   next();
 }

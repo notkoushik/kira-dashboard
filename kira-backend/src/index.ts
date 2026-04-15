@@ -56,8 +56,8 @@ async function initializeApp(): Promise<Express> {
     }
 
     // Logging request ID
-    app.use((req, res, next) => {
-      (req as any).id = Math.random().toString(36).substring(7);
+    app.use((_req, _res, next) => {
+      (_req as any).id = Math.random().toString(36).substring(7);
       next();
     });
 
@@ -75,7 +75,7 @@ async function initializeApp(): Promise<Express> {
     app.use('/api/', apiLimiter);
 
     // Health check (before auth)
-    app.get('/health', (req, res) => {
+    app.get('/health', (_req, res) => {
       res.status(200).json({
         success: true,
         message: 'KIRA Backend is running',

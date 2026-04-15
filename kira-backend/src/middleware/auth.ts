@@ -13,7 +13,7 @@ export class AuthError extends Error {
 /**
  * Middleware to verify JWT token from Authorization header
  */
-export function authenticate(req: Request, res: Response, next: NextFunction) {
+export function authenticate(req: Request, res: Response, next: NextFunction): any {
   try {
     const authHeader = req.headers.authorization;
 
@@ -31,7 +31,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
       const decoded = jwt.verify(token, config.jwt.secret) as JWTPayload;
       req.userId = decoded.userId;
       req.email = decoded.email;
-      next();
+      return next();
     } catch (err: any) {
       if (err.name === 'TokenExpiredError') {
         return res.status(401).json({
@@ -60,7 +60,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
 /**
  * Optional authentication - doesn't fail if token is missing, but extracts if present
  */
-export function optionalAuthenticate(req: Request, res: Response, next: NextFunction) {
+export function optionalAuthenticate(req: Request, _res: Response, next: NextFunction): any {
   try {
     const authHeader = req.headers.authorization;
 
@@ -87,12 +87,12 @@ export function optionalAuthenticate(req: Request, res: Response, next: NextFunc
  * Generate JWT token
  */
 export function generateToken(userId: string, email: string): string {
-  return jwt.sign(
+  return (jwt.sign as any)(
     {
       userId,
       email,
     },
-    config.jwt.secret,
+    config.jwt.secret as string,
     {
       expiresIn: config.jwt.expiry,
     }

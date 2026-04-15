@@ -4,7 +4,6 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { validateRequest, AuthSchema, UpdateProfileSchema } from '../middleware/validation';
 import { authLimiter } from '../middleware/rateLimiter';
 import { AuthService } from '../services/AuthService';
-import { logger } from '../config/logger';
 
 const router = Router();
 
@@ -71,7 +70,7 @@ router.get(
 
     const { password_hash, ...userWithoutPassword } = user;
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: userWithoutPassword,
       timestamp: new Date().toISOString(),

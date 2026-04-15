@@ -75,7 +75,7 @@ router.get(
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: job,
       timestamp: new Date().toISOString(),
@@ -112,7 +112,7 @@ router.post(
     }
 
     // Otherwise, it's a normal Job object
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       data: result,
       timestamp: new Date().toISOString(),
@@ -196,7 +196,7 @@ router.post(
 
     const deletedCount = await JobService.bulkDeleteJobs(req.userId!, ids);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: { deletedCount },
       timestamp: new Date().toISOString(),
