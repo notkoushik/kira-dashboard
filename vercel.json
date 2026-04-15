@@ -1,0 +1,30 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "./",
+  "installCommand": "npm install",
+  "framework": "other",
+  "env": [
+    "NODE_ENV=production",
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_KEY",
+    "JWT_SECRET",
+    "FRONTEND_URL"
+  ],
+  "functions": {
+    "kira-backend/src/index.ts": {
+      "runtime": "nodejs18.x",
+      "memory": 1024
+    }
+  },
+  "routes": [
+    {
+      "src": "^/api/(.*)",
+      "dest": "/kira-backend/src/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/"
+    }
+  ]
+}
