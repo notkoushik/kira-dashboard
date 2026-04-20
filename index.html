@@ -666,6 +666,135 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 }
 
 /* ============================================= */
+/* AUTHENTICATION SCREEN                        */
+/* ============================================= */
+#authScreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+#authScreen.hidden { display: none; }
+.auth-container {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px 24px;
+}
+.auth-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.auth-header .logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: 12px;
+}
+.auth-header .logo svg { width: 40px; height: 40px; }
+.auth-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.auth-header p {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+.auth-form {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.auth-form .form-group {
+  margin-bottom: 16px;
+}
+.auth-form .form-group:last-child { margin-bottom: 0; }
+.auth-form label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.auth-form input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  color: var(--color-text);
+  font-size: 14px;
+  transition: border-color var(--transition);
+}
+.auth-form input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+.auth-error {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #fca5a5;
+  padding: 10px 12px;
+  border-radius: var(--radius-input);
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: none;
+}
+.auth-error.show { display: block; }
+.auth-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.btn-auth-submit {
+  flex: 1;
+  padding: 12px;
+  background: var(--color-accent);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-btn);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-auth-submit:hover { background: var(--color-accent-hover); }
+.btn-auth-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.auth-toggle {
+  text-align: center;
+}
+.auth-toggle p {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.auth-toggle button {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+.auth-toggle button:hover { text-decoration: underline; }
+
+/* ============================================= */
 /* FORM FIELDS IN MODALS/DRAWERS                 */
 /* ============================================= */
 .form-group { margin-bottom: 14px; }
@@ -725,6 +854,47 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 </head>
 <body>
 
+<!-- AUTHENTICATION SCREEN -->
+<div id="authScreen">
+  <div class="auth-container">
+    <div class="auth-header">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/><polyline points="2 15.5 12 8.5 22 15.5"/><line x1="12" y1="2" x2="12" y2="8.5"/></svg>
+        KIRA
+      </div>
+      <h1 id="authTitle">Login</h1>
+      <p id="authSubtitle">Enter your credentials to access the dashboard</p>
+    </div>
+
+    <div class="auth-form">
+      <div class="auth-error" id="authError"></div>
+
+      <div class="form-group" id="nameFieldGroup" style="display: none;">
+        <label for="authName">Full Name</label>
+        <input type="text" id="authName" placeholder="Your name" autocomplete="name" onkeypress="if(event.key==='Enter') handleAuthSubmit()">
+      </div>
+
+      <div class="form-group">
+        <label for="authEmail">Email</label>
+        <input type="email" id="authEmail" placeholder="your@email.com" autocomplete="email" onkeypress="if(event.key==='Enter') handleAuthSubmit()">
+      </div>
+
+      <div class="form-group">
+        <label for="authPassword">Password</label>
+        <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" onkeypress="if(event.key==='Enter') handleAuthSubmit()">
+      </div>
+
+      <div class="auth-buttons">
+        <button class="btn-auth-submit" id="authSubmitBtn" onclick="handleAuthSubmit()">Login</button>
+      </div>
+
+      <div class="auth-toggle">
+        <p>Don't have an account? <button onclick="toggleAuthMode()">Sign up</button></p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="app">
   <!-- TOP NAVIGATION -->
   <nav class="top-nav" id="topNav">
@@ -740,6 +910,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
     <button class="tab-btn" data-tab="inbox" onclick="switchTab('inbox')"><i data-lucide="mail" style="width:16px;height:16px"></i><span class="tab-label">Inbox</span><span class="badge" id="inboxBadge" style="display:none">0</span></button>
     <button class="tab-btn" data-tab="analytics" onclick="switchTab('analytics')"><i data-lucide="bar-chart-3" style="width:16px;height:16px"></i><span class="tab-label">Analytics</span></button>
     <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')"><i data-lucide="settings" style="width:16px;height:16px"></i><span class="tab-label">Settings</span></button>
+    <button class="tab-btn" style="margin-left: auto;" onclick="handleLogout()" title="Logout"><i data-lucide="log-out" style="width:16px;height:16px"></i><span class="tab-label">Logout</span></button>
   </nav>
 
   <!-- MAIN CONTENT AREA -->
@@ -1017,6 +1188,191 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 <div id="toast-container"></div>
 
 <script>
+/* ============================================================ */
+/* CONFIGURATION                                               */
+/* ============================================================ */
+window.API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3000'
+  : 'https://kira-backend-production.vercel.app';  // Update with your deployed backend URL
+
+/* ============================================================ */
+/* AUTHENTICATION SERVICE                                      */
+/* ============================================================ */
+const AuthService = (() => {
+  let isRegistering = false;
+
+  async function login(email, password) {
+    const response = await fetch(`${window.API_BASE_URL}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Login failed');
+    }
+
+    const result = await response.json();
+    if (result.data && result.data.token) {
+      localStorage.setItem('auth_token', result.data.token);
+      localStorage.setItem('user_id', result.data.user.id);
+      localStorage.setItem('user_email', result.data.user.email);
+    }
+    return result.data;
+  }
+
+  async function register(email, password, name) {
+    const response = await fetch(`${window.API_BASE_URL}/api/v1/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Registration failed');
+    }
+
+    const result = await response.json();
+    if (result.data && result.data.token) {
+      localStorage.setItem('auth_token', result.data.token);
+      localStorage.setItem('user_id', result.data.user.id);
+      localStorage.setItem('user_email', result.data.user.email);
+    }
+    return result.data;
+  }
+
+  async function logout() {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      try {
+        await fetch(`${window.API_BASE_URL}/api/v1/auth/logout`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+      } catch (e) {
+        console.error('Logout error:', e);
+      }
+    }
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_id');
+  }
+
+  function getToken() {
+    return localStorage.getItem('auth_token');
+  }
+
+  function isAuthenticated() {
+    return !!getToken();
+  }
+
+  function setRegistering(value) {
+    isRegistering = value;
+  }
+
+  function getRegistering() {
+    return isRegistering;
+  }
+
+  return { login, register, logout, getToken, isAuthenticated, setRegistering, getRegistering };
+})();
+
+/* ============================================================ */
+/* AUTHENTICATION UI HANDLERS                                  */
+/* ============================================================ */
+function toggleAuthMode() {
+  const isReg = AuthService.getRegistering();
+  AuthService.setRegistering(!isReg);
+
+  const title = document.getElementById('authTitle');
+  const subtitle = document.getElementById('authSubtitle');
+  const nameGroup = document.getElementById('nameFieldGroup');
+  const btn = document.getElementById('authSubmitBtn');
+  const toggle = document.querySelector('.auth-toggle p');
+
+  if (!isReg) {
+    title.textContent = 'Sign Up';
+    subtitle.textContent = 'Create a new account to get started';
+    nameGroup.style.display = 'block';
+    btn.textContent = 'Sign Up';
+    toggle.innerHTML = 'Already have an account? <button onclick="toggleAuthMode()">Login</button>';
+  } else {
+    title.textContent = 'Login';
+    subtitle.textContent = 'Enter your credentials to access the dashboard';
+    nameGroup.style.display = 'none';
+    btn.textContent = 'Login';
+    toggle.innerHTML = 'Don\'t have an account? <button onclick="toggleAuthMode()">Sign up</button>';
+  }
+
+  document.getElementById('authError').classList.remove('show');
+}
+
+async function handleAuthSubmit() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value.trim();
+  const name = document.getElementById('authName').value.trim();
+  const errorEl = document.getElementById('authError');
+  const btn = document.getElementById('authSubmitBtn');
+  const isReg = AuthService.getRegistering();
+
+  errorEl.classList.remove('show');
+
+  if (!email || !password) {
+    errorEl.textContent = 'Please fill in all fields';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  if (isReg && !name) {
+    errorEl.textContent = 'Please enter your name';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = isReg ? 'Signing up...' : 'Logging in...';
+
+  try {
+    if (isReg) {
+      await AuthService.register(email, password, name);
+    } else {
+      await AuthService.login(email, password);
+    }
+
+    hideAuthScreen();
+    location.reload();
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = isReg ? 'Sign Up' : 'Login';
+  }
+}
+
+function hideAuthScreen() {
+  const authScreen = document.getElementById('authScreen');
+  authScreen.classList.add('hidden');
+}
+
+function showAuthScreen() {
+  const authScreen = document.getElementById('authScreen');
+  authScreen.classList.remove('hidden');
+}
+
+async function handleLogout() {
+  if (confirm('Are you sure you want to logout?')) {
+    await AuthService.logout();
+    showAuthScreen();
+    document.getElementById('authEmail').value = '';
+    document.getElementById('authPassword').value = '';
+    document.getElementById('authName').value = '';
+    AuthService.setRegistering(false);
+    toggleAuthMode();
+  }
+}
+
 /* ============================================================ */
 /* SENTRY — MonitorService (INIT FIRST)                        */
 /* ============================================================ */
@@ -2248,6 +2604,15 @@ const loadData = MonitorService.wrap(async function() {
 /* APP INIT                                                     */
 /* ============================================================ */
 (async function init() {
+  // Check authentication first
+  if (!AuthService.isAuthenticated()) {
+    showAuthScreen();
+    document.getElementById('authEmail').focus();
+    return;
+  }
+
+  hideAuthScreen();
+
   UIRenderer.renderGreeting();
   UIRenderer.renderQuote();
   UIRenderer.renderSystemStatus();
